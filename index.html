@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+        <script>
+        
+        $("document").ready(function() {
+            var youContext = $("#you")[0].getContext("2d");
+            var otherContext = $("#other")[0].getContext("2d");
+            var socket = io.connect();
+            var video = $("#webcam")[0];
+
+            var videoCallback = function() {
+                youContext.drawImage(video, 0, 0, 400, 300);
+                var imgData = youContext.getImageData(0, 0, 400, 300);
+                socket.emit("imgData",{img: imgData});
+                setTimeout(videoCallback, 5000);
+            };
+
+            socket.on('imgData', function (data) {
+                console.log("data received");
+                otherContext.putImageData(data.img);
+            });
+          
+            //Get Webcam access
+            window.navigator.webkitGetUserMedia({audio: true, video: true}, function(stream) {
+                video.src = window.webkitURL.createObjectURL(stream);
+                videoCallback();
+            });
+        });
+        </script>
+    </head>
+    <body>
+        <div>
+            <video id="webcam" style="display:none;" width="400" height="300" autoplay></video>
+            <canvas id="you" width="400" height="300"></canvas>
+            <canvas id="other" width="400" height="300"></canvas>
+        </div>
+    </body>
+</html>
