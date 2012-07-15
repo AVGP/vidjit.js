@@ -4,7 +4,7 @@
         <script src="/socket.io/socket.io.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
         <script>
-        
+
         $("document").ready(function() {
             var youContext = $("#you")[0].getContext("2d");
             var otherContext = $("#other")[0].getContext("2d");
@@ -14,15 +14,19 @@
             var videoCallback = function() {
                 youContext.drawImage(video, 0, 0, 400, 300);
                 var imgData = youContext.getImageData(0, 0, 400, 300);
-                socket.emit("imgData",{img: imgData});
-                setTimeout(videoCallback, 5000);
+                socket.emit("imgData",{type: "full", img: $("#you")[0].toDataURL()});
+                setTimeout(videoCallback, 2000);
             };
 
             socket.on('imgData', function (data) {
                 console.log("data received");
-                otherContext.putImageData(data.img);
+                console.log(data);
+                var img = new Image();
+                img.src = data.img;
+                otherContext.drawImage(img, 0, 0);
+//                otherContext.putImageData(window.atob(data.img), 0, 0);
             });
-          
+
             //Get Webcam access
             window.navigator.webkitGetUserMedia({audio: true, video: true}, function(stream) {
                 video.src = window.webkitURL.createObjectURL(stream);
@@ -35,7 +39,7 @@
         <div>
             <video id="webcam" style="display:none;" width="400" height="300" autoplay></video>
             <canvas id="you" width="400" height="300"></canvas>
-            <canvas id="other" width="400" height="300"></canvas>
+            <canvas style="border:1px solid red;" id="other" width="400" height="300"></canvas>
         </div>
     </body>
 </html>
