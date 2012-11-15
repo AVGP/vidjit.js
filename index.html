@@ -3,28 +3,28 @@
     <head>
         <script src="/socket.io/socket.io.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+        <script src="/lzw.js"></script>
         <script>
-
+		
         $("document").ready(function() {
             var youContext = $("#you")[0].getContext("2d");
-            var otherContext = $("#other")[0].getContext("2d");
             var socket = io.connect();
             var video = $("#webcam")[0];
 
             var videoCallback = function() {
                 youContext.drawImage(video, 0, 0, 400, 300);
                 var imgData = youContext.getImageData(0, 0, 400, 300);
-                socket.emit("imgData",{type: "full", img: $("#you")[0].toDataURL()});
-                setTimeout(videoCallback, 2000);
+                var frameData = LZW.compress($("#you")[0].toDataURL());
+                
+                socket.emit("imgData",{type: "full", img: frameData});
+                setTimeout(videoCallback, 500);
             };
 
             socket.on('imgData', function (data) {
-                console.log("data received");
-                console.log(data);
-                var img = new Image();
-                img.src = data.img;
-                otherContext.drawImage(img, 0, 0);
-//                otherContext.putImageData(window.atob(data.img), 0, 0);
+            	console.log("We got data!");
+            	var img = $("#other")[0];
+                var uncompressed = LZW.decompress(data.img);
+                img.src = uncompressed;
             });
 
             //Get Webcam access
@@ -39,7 +39,7 @@
         <div>
             <video id="webcam" style="display:none;" width="400" height="300" autoplay></video>
             <canvas id="you" width="400" height="300"></canvas>
-            <canvas style="border:1px solid red;" id="other" width="400" height="300"></canvas>
+			<img id="other" />
         </div>
     </body>
 </html>
