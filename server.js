@@ -9,13 +9,10 @@ var port = process.env.PORT || 8080;
 server.listen(port);
 console.log(port);
 
-app.get('/', function (req, res) {
-  res.sendfile(__dirname + '/index.html');
-});
+app.use("/", express.static(__dirname));
 
 io.sockets.on('connection', function (socket) {
     socket.on("imgData", function(data) {
-        console.log("Received data. Broadcasting..");
         this.broadcast.emit("imgData", data);
     });
 });
