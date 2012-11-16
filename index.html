@@ -11,21 +11,28 @@
             var otherContext = $("#other")[0].getContext("2d");
             var socket = io.connect();
             var video = $("#webcam")[0];
+            var lastFrameAvg = 0;
 
             var videoCallback = function() {
             	var start = new Date().getTime();
                 youContext.drawImage(video, 0, 0, 400, 300);
                 var imgData = youContext.getImageData(0, 0, 400, 300);
                 var stringBuffer = "";
+                var sum = 0;
                 
                 for(var i=0, len = imgData.data.length; i < len; i+=4) {
-                	for(var j=0;j<3;j++) stringBuffer += String.fromCharCode(imgData.data[i + j]);
+                	for(var j=0;j<3;j++) { 
+                		stringBuffer += String.fromCharCode(imgData.data[i + j]);
+		                sum += imgData.data[i + j];
+        	        }
                 }
+                var avg = sum / imgData.data.length;
                 var compressed = LZW.compress(stringBuffer);
-                console.log("LEN " + compressed.length);
-                socket.emit("imgData",{type: "full", img: compressed});
+				console.log("AVG DIFF: " + Math.abs(avg - lastFrameAvg));
+				if(Math.abs(avg - lastFrameAvg) > 2) socket.emit("imgData",{type: "full", img: compressed});
+				lastFrameAvg = avg;
                 setTimeout(videoCallback, 50);
-                console.log("ENC took: " + ((new Date().getTime() - start)/1000));
+//                console.log("ENC took: " + ((new Date().getTime() - start)/1000));
             };
 
             socket.on('imgData', function (data) {
