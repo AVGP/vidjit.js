@@ -1,18 +1,21 @@
-# README for a newly created project.
+# Javascript Videostreaming
 
-There are a couple of things you should do first, before you can use all of Git's power:
+**This is an experiment and for demo purposes only - at least for the moment**
 
-  * Add a remote to this project: in the Cloud9 IDE command line, you can execute the following commands
-    `git remote add [remote name] [remote url (eg. 'git@github.com:/ajaxorg/node_chat')]` [Enter]
-  * Create new files inside your project
-  * Add them to to Git by executing the following command
-    `git add [file1, file2, file3, ...]` [Enter]
-  * Create a commit which can be pushed to the remote you just added
-    `git commit -m 'added new files'` [Enter]
-  * Push the commit the remote
-    `git push [remote name] master` [Enter]
+## Why would you want that?
 
-That's it! If this doesn't work for you, please visit the excellent resources from [Github.com](http://help.github.com) and the [Pro Git](http://http://progit.org/book/) book.
-If you can't find your answers there, feel free to ask us via Twitter (@cloud9ide), [mailing list](groups.google.com/group/cloud9-ide) or IRC (#cloud9ide on freenode).
+Video streaming has been a domain for plugins (Flash, Silverlight and even worse stuff) but the UserMedia API and Javascript give us enough power to
+do it with the on-board awesomeness of modern browsers. So, why not?
 
-Happy coding!
+## Yeah, but there is WebRTC as well?
+
+While WebRTC is super-freakin'-awesome it is not supported by most browsers just now.
+The UserMedia API is not supported by all browsers as well, but still it is more wide-spread at the moment.
+I hope that this will change sooner rather than later, but for the moment, this is the experiment of creating sort of a fallback solution.
+
+## What's on the ToDo?
+
+* Better performance
+* Supporting more browsers by adding the necessary switches, at the moment I default to WebKit.
+* Support saving the streamed data somehow (mebbe on the server, maybe even on the client side).
+* Have some more coffee.
