@@ -5,6 +5,8 @@ var app = express();
 var server = http.createServer(app);
 var io = require('socket.io').listen(server);
 
+io.set('log level', 1);
+
 var port = process.env.PORT || 8080;
 server.listen(port);
 console.log(port);
