@@ -5,41 +5,59 @@
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
         <script src="/lzw.js"></script>
         <script>
+        var threshold = 0.5;
+        
+		function calcPartialAvg(arr, fromIndex, toIndex) {
+			var sum = 0;
+			var len = toIndex - fromIndex;
+			for(var i=fromIndex; i<toIndex; i++) sum += arr[i];
+			return sum / len;
+		}
+		
+		function compressImgData(buffer) {
+  	      var stringBuffer = "";
+          for(var i=0, len = buffer.length; i < len; i+=4) {
+          	for(var j=0;j<3;j++) { 
+            	stringBuffer += String.fromCharCode(buffer[i + j]);
+        	}
+          }
+     	  return LZW.compress(stringBuffer);
+		}
 		
         $("document").ready(function() {
             var youContext = $("#you")[0].getContext("2d");
             var otherContext = $("#other")[0].getContext("2d");
             var socket = io.connect();
             var video = $("#webcam")[0];
-            var lastFrameAvg = 0;
+            var lastFrameAvgs = [0, 0];
+            var tLastKeyFrame = 0;
 
             var videoCallback = function() {
-            	var start = new Date().getTime();
+    //        	var start = new Date().getTime();
                 youContext.drawImage(video, 0, 0, 400, 300);
                 var imgData = youContext.getImageData(0, 0, 400, 300);
-                var stringBuffer = "";
-                var sum = 0;
-                
-                for(var i=0, len = imgData.data.length; i < len; i+=4) {
-                	for(var j=0;j<3;j++) { 
-                		stringBuffer += String.fromCharCode(imgData.data[i + j]);
-		                sum += imgData.data[i + j];
-        	        }
+               	var avgs = [
+               		calcPartialAvg(imgData.data, 0, imgData.data.length / 2),
+               		calcPartialAvg(imgData.data, imgData.data.length / 2 + 1, imgData.data.length)
+               	];
+               	for(var i=0; i<2;i++) {
+               		if(Math.abs(avgs[i]-lastFrameAvgs[i]) > threshold) {
+                		socket.emit("imgData", { 
+		         			half: i, img: compressImgData(youContext.getImageData(0,150 * i, 400, 150).data)
+       		       		});
+                	}
+	                lastFrameAvgs[i] = avgs[i];                	
                 }
-                var avg = sum / imgData.data.length;
-                var compressed = LZW.compress(stringBuffer);
-				console.log("AVG DIFF: " + Math.abs(avg - lastFrameAvg));
-				if(Math.abs(avg - lastFrameAvg) > 2) socket.emit("imgData",{type: "full", img: compressed});
-				lastFrameAvg = avg;
+                
                 setTimeout(videoCallback, 50);
 //                console.log("ENC took: " + ((new Date().getTime() - start)/1000));
             };
 
             socket.on('imgData', function (data) {
-            	var start = new Date().getTime();
+  //          	var start = new Date().getTime();
 				var uncompressed = LZW.decompress(data.img);
-				var imgData = otherContext.createImageData(400,300);
-				var realOffset = 0;
+				var imgData = otherContext.getImageData(0,0,400,300);
+				var realOffset = data.half * 240000; // 4 * width * height/2
                 for(var i=0, len = uncompressed.length; i < len; i += 3) {
                 	imgData.data[realOffset] = uncompressed.charCodeAt(i);
                 	imgData.data[realOffset+1] = uncompressed.charCodeAt(i+1);
@@ -48,7 +66,8 @@
                 	realOffset += 4;
                 }
                 otherContext.putImageData(imgData, 0, 0);
-                console.log("DEC took: " + ((new Date().getTime() - start) / 1000));
+	            	
+//                console.log("DEC took: " + ((new Date().getTime() - start) / 1000));
             });
 
             //Get Webcam access
