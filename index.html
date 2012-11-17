@@ -5,7 +5,7 @@
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
         <script src="/lzw.js"></script>
         <script>
-        var threshold = 0.5;
+        var threshold = 1/16;
         
 		function calcPartialAvg(arr, fromIndex, toIndex) {
 			var sum = 0;
@@ -29,24 +29,24 @@
             var otherContext = $("#other")[0].getContext("2d");
             var socket = io.connect();
             var video = $("#webcam")[0];
-            var lastFrameAvgs = [0, 0];
+            var lastFrameAvgs = [0, 0, 0];
             var tLastKeyFrame = 0;
+            var nSegments = 3;
+            var segmentLength = 160000; // each segment has 100 lines -> 400 * 4 * 100
 
             var videoCallback = function() {
     //        	var start = new Date().getTime();
                 youContext.drawImage(video, 0, 0, 400, 300);
                 var imgData = youContext.getImageData(0, 0, 400, 300);
-               	var avgs = [
-               		calcPartialAvg(imgData.data, 0, imgData.data.length / 2),
-               		calcPartialAvg(imgData.data, imgData.data.length / 2 + 1, imgData.data.length)
-               	];
-               	for(var i=0; i<2;i++) {
-               		if(Math.abs(avgs[i]-lastFrameAvgs[i]) > threshold) {
+               	for(var i=0; i<nSegments;i++) {
+               		var avg = calcPartialAvg(imgData.data, i * segmentLength, (i+1) * segmentLength);
+
+               		if(Math.abs(avg-lastFrameAvgs[i]) > threshold) {
                 		socket.emit("imgData", { 
-		         			half: i, img: compressImgData(youContext.getImageData(0,150 * i, 400, 150).data)
+		         			part: i, img: compressImgData(youContext.getImageData(0,100 * i, 400, 100).data)
        		       		});
                 	}
-	                lastFrameAvgs[i] = avgs[i];                	
+	                lastFrameAvgs[i] = avg;                	
                 }
                 
                 setTimeout(videoCallback, 50);
@@ -57,7 +57,7 @@
   //          	var start = new Date().getTime();
 				var uncompressed = LZW.decompress(data.img);
 				var imgData = otherContext.getImageData(0,0,400,300);
-				var realOffset = data.half * 240000; // 4 * width * height/2
+				var realOffset = data.part * segmentLength;
                 for(var i=0, len = uncompressed.length; i < len; i += 3) {
                 	imgData.data[realOffset] = uncompressed.charCodeAt(i);
                 	imgData.data[realOffset+1] = uncompressed.charCodeAt(i+1);
