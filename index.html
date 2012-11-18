@@ -5,7 +5,9 @@
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
         <script src="/lzw.js"></script>
         <script>
-        var threshold = 1/16;
+        var threshold = 0.5;
+        var width = 400, height = 300;
+        var segmentWidth = 100, segmentHeight = 100, nSegments = (width / segmentWidth) * (height / segmentHeight);
         
 		function calcPartialAvg(arr, fromIndex, toIndex) {
 			var sum = 0;
@@ -14,14 +16,39 @@
 			return sum / len;
 		}
 		
-		function compressImgData(buffer) {
+		/*
+		* Calculates the average value of all pixel values (RGB) for a given rectangular area of the pixel buffer
+		* @param arr The Array holding the pixel data (top-left to bottom-right, format RGBA,RGBA,RGBA...
+		* @param xOffset The x-axis offset IN PIXELS(!)
+		* @param yOffset The y-axis offset IN PIXELS(!)
+		* @param w The width of the area IN PIXELS(!)
+		* @param h The height of the area IN PIXELS(!)		
+		*/
+		function getAreaAvg(arr, xOffset, yOffset, w, h) {
+			var sum = 0;
+			var xStart = xOffset, xEnd = xOffset + w;
+			var yStart = yOffset, yEnd = y + h;
+			for(var y = yOffset; y < yOffset + h; y++) {
+				for(var x = xStart; x < xEnd; x++) {
+					for(var i=0; i < 3; i++) {
+						sum += arr[(y * width * 4) + (x * 4) + i ];
+					}
+				}
+			}
+			return sum / (w * h * 3);
+		}
+		
+		function compressImgDataPartial(buffer,w,h) {
   	      var stringBuffer = "";
-          for(var i=0, len = buffer.length; i < len; i+=4) {
-          	for(var j=0;j<3;j++) { 
-            	stringBuffer += String.fromCharCode(buffer[i + j]);
-        	}
-          }
-     	  return LZW.compress(stringBuffer);
+  	      //This construction makes sure we're only compressing RGB, not the Alpha channel of RGBA information.
+		  for(var y = 0; y < h; y++) {
+			for(var x = 0; x < w; x++) {
+			  for(var i=0; i < 3; i++) {
+		        stringBuffer += String.fromCharCode(buffer[i + (4 * y * w) + (x * 4)]);					
+			  }
+			}
+		  }
+	      return LZW.compress(stringBuffer);
 		}
 		
         $("document").ready(function() {
@@ -29,24 +56,28 @@
             var otherContext = $("#other")[0].getContext("2d");
             var socket = io.connect();
             var video = $("#webcam")[0];
-            var lastFrameAvgs = [0, 0, 0];
-            var tLastKeyFrame = 0;
-            var nSegments = 3;
-            var segmentLength = 160000; // each segment has 100 lines -> 400 * 4 * 100
-
+            var lastFrameAvgs = new Array();
+            for(var i=0; i < nSegments; i++) lastFrameAvgs[i] = 0;
             var videoCallback = function() {
     //        	var start = new Date().getTime();
                 youContext.drawImage(video, 0, 0, 400, 300);
                 var imgData = youContext.getImageData(0, 0, 400, 300);
-               	for(var i=0; i<nSegments;i++) {
-               		var avg = calcPartialAvg(imgData.data, i * segmentLength, (i+1) * segmentLength);
-
-               		if(Math.abs(avg-lastFrameAvgs[i]) > threshold) {
-                		socket.emit("imgData", { 
-		         			part: i, img: compressImgData(youContext.getImageData(0,100 * i, 400, 100).data)
-       		       		});
+                
+                var currentSegmentIndex = 0;
+                for(var y = 0; y < height; y += segmentHeight) {
+                	for(var x = 0; x < width; x += segmentWidth) {
+                		var segmentImgData = youContext.getImageData(x, y, segmentWidth, segmentHeight).data;
+                		var avg = calcPartialAvg(segmentImgData,0, segmentWidth * segmentHeight * 4);
+                		if(Math.abs(avg - lastFrameAvgs[currentSegmentIndex]) > threshold) {
+                			socket.emit("imgData", {
+                				"x": x, 
+                				"y": y, 
+                				img: compressImgDataPartial(segmentImgData, segmentWidth, segmentHeight)
+                			});
+                		}
+                		lastFrameAvgs[currentSegmentIndex] = avg;
+                		currentSegmentIndex++;
                 	}
-	                lastFrameAvgs[i] = avg;                	
                 }
                 
                 setTimeout(videoCallback, 50);
@@ -57,13 +88,14 @@
   //          	var start = new Date().getTime();
 				var uncompressed = LZW.decompress(data.img);
 				var imgData = otherContext.getImageData(0,0,400,300);
-				var realOffset = data.part * segmentLength;
-                for(var i=0, len = uncompressed.length; i < len; i += 3) {
-                	imgData.data[realOffset] = uncompressed.charCodeAt(i);
-                	imgData.data[realOffset+1] = uncompressed.charCodeAt(i+1);
-                	imgData.data[realOffset+2] = uncompressed.charCodeAt(i+2);
-                	imgData.data[realOffset+3] = 0xff;
-                	realOffset += 4;
+                for(var i=0, len = uncompressed.length; i < len; i+= 3) {
+                	var tx = ((i/3) % segmentWidth) + data.x;
+                	var ty = Math.floor((i/3) / segmentWidth) + data.y;
+                	
+                	imgData.data[(ty * 400 * 4) + 4*tx] = uncompressed.charCodeAt(i);
+                	imgData.data[(ty * 400 * 4) + 4*tx + 1] = uncompressed.charCodeAt(i + 1);
+                	imgData.data[(ty * 400 * 4) + 4*tx + 2] = uncompressed.charCodeAt(i + 2);
+                	imgData.data[(ty * 400 * 4) + 4*tx + 3] = 0xff;
                 }
                 otherContext.putImageData(imgData, 0, 0);
 	            	
