@@ -1,5 +1,5 @@
 # Vidjit.js - Javascript Videostreaming library
-
+## Version 0.1.1
 **This is an experiment and needs a lot of work!**
 
 ## Why would you want that?
@@ -14,12 +14,12 @@ The UserMedia API is not supported by all browsers as well, but still it is more
 I hope that this will change sooner rather than later, but for the moment, this is the experiment of creating sort of a fallback solution.
 
 ## Requirements:
-* socket.io & node.js
+The default settings require node.js and socket.io to work.
+However, if you wish you could just hook sendSegment, receiveSegmentFunc and receiveSegmentTrigger to work around this.
 
 ## What's on the ToDo?
 
 * Better performance
 * Supporting more browsers by adding the necessary switches, at the moment I default to WebKit.
 * Support saving the streamed data somehow (mebbe on the server, maybe even on the client side).
-* Have some more coffee.
-* Allowing to hook in to change the videoCallback function, and creating callbacks for receiving stream data as well as sending stream data.
+* Have some sleep.

@@ -8,7 +8,7 @@ var Vidjit = (function() {
     var canvasInContext = null, canvasOutContext;
     var canvas = null;
     var inputElem = null, outputElem = null, socketInstance;
-
+    
 // Internal helper functions
 
 	var calcPartialAvg = function(buffer, fromIndex, toIndex) {
@@ -40,11 +40,7 @@ var Vidjit = (function() {
 				var segmentImgData = canvasInContext.getImageData(x, y, segmentWidth, segmentHeight).data;
 				var avg = calcPartialAvg(segmentImgData,0, segmentWidth * segmentHeight * 4);
 				if(Math.abs(avg - lastFrameAvgs[currentSegmentIndex]) > threshold) {
-					socketInstance.emit("imgData", {
-						"x": x, 
-						"y": y, 
-						img: compressImgDataPartial(segmentImgData, segmentWidth, segmentHeight)
-					});
+					sendSegmentCallback(x,y, segmentImgData);
 				}
 				lastFrameAvgs[currentSegmentIndex] = avg;
 				currentSegmentIndex++;
@@ -54,26 +50,24 @@ var Vidjit = (function() {
 		setTimeout(videoCallback, 50);
 	};
 	
-	var setupSocketListener = function() {
-		socketInstance.on('imgData', function (data) {
-			var uncompressed = Vidjit.LZW.decompress(data.img);
-			var imgData = canvasOutContext.getImageData(0,0,width,height);
-			for(var i=0, len = uncompressed.length; i < len; i+= 3) {
-				var tx = ((i/3) % segmentWidth) + data.x;
-				var ty = Math.floor((i/3) / segmentWidth) + data.y;
-			
-				imgData.data[(ty * 400 * 4) + 4*tx] = uncompressed.charCodeAt(i);
-				imgData.data[(ty * 400 * 4) + 4*tx + 1] = uncompressed.charCodeAt(i + 1);
-				imgData.data[(ty * 400 * 4) + 4*tx + 2] = uncompressed.charCodeAt(i + 2);
-				imgData.data[(ty * 400 * 4) + 4*tx + 3] = 0xff;
-			}
-			canvasOutContext.putImageData(imgData, 0, 0);
-		});
+	var renderCompressedSegment = function(data, x, y) {
+		var uncompressed = Vidjit.LZW.decompress(data, x, y);
+		var imgData = canvasOutContext.getImageData(0,0,width,height);
+		for(var i=0, len = uncompressed.length; i < len; i+= 3) {
+			var tx = ((i/3) % segmentWidth) + x;
+			var ty = Math.floor((i/3) / segmentWidth) + y;
+		
+			imgData.data[(ty * 400 * 4) + 4*tx] = uncompressed.charCodeAt(i);
+			imgData.data[(ty * 400 * 4) + 4*tx + 1] = uncompressed.charCodeAt(i + 1);
+			imgData.data[(ty * 400 * 4) + 4*tx + 2] = uncompressed.charCodeAt(i + 2);
+			imgData.data[(ty * 400 * 4) + 4*tx + 3] = 0xff;
+		}
+		canvasOutContext.putImageData(imgData, 0, 0);
 	};
-	
+			
 // Exported functions
 
-	var init = function(videoInput, canvasOutput, socket) {
+	var init = function(videoInput, canvasOutput, socket, sendCallback, receiveCallback) {
 		inputElem = videoInput;
 		outputElem = canvasOutput;
 		socketInstance = socket;
@@ -89,6 +83,9 @@ var Vidjit = (function() {
         //TODO: Make sure this works in all browsers!
         canvasInContext = canvas.getContext("2d");
         canvasOutContext = canvasOutput.getContext("2d");	
+        
+        if(sendCallback !== undefined) sendSegmentCallback = sendCallback;
+        if(receiveCallback !== undefined) receiveSegmentCallback = receiveCallback;
 	};
 	
 	var start = function() {
@@ -96,13 +93,40 @@ var Vidjit = (function() {
     	window.navigator.webkitGetUserMedia({audio: true, video: true}, function(stream) {
         	inputElem.src = window.webkitURL.createObjectURL(stream);
             videoCallback();
-        });	
+        });
         
-        setupSocketListener();
+        receiveSegment();  
 	};
 	
+    var sendSegmentCallback = function(x,y, segmentImgData) {
+		socketInstance.emit("imgData", {
+			"x": x, 
+			"y": y, 
+			img: compressImgDataPartial(segmentImgData, segmentWidth, segmentHeight)
+		});    
+    };
+    var receiveSegmentSource = undefined;
+    
+	var receiveSegment = function() {
+		if(receiveSegmentSource === undefined) {
+			socketInstance.on('imgData', function (data) {
+				renderCompressedSegment(data.img, data.x, data.y);
+			});
+		} else {
+			data = sourceFunction();
+			renderCompressedSegment(data.buffer, data.x, data.y);			
+		}
+	};    
+	
+	
 // Thank's for reading the source code. Have some fun!	
-	return { "init": init, "start": start };
+	return {
+		"init": init, 
+		"start": start, 
+		"sendSegmentCallback": sendSegmentCallback, 
+		"receiveSegmentFunc": receiveSegmentSource,
+		"receiveSegmentTrigger": receiveSegment
+	};
 }());
 
 Vidjit.LZW = {
