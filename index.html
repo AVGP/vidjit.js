@@ -8,9 +8,9 @@
 	<canvas id="canvas2" width="500" height="500" style="border:#f00 solid 1px"></canvas>
 	<video id="webcam" style="display:block;" width="400" height="300" autoplay></video>
 	<script>
-		var streaming = Vidjit;
-		streaming.init(document.getElementById("webcam"), document.getElementById("canvas2"), io.connect());
-		streaming.start();
+		var stream = Vidjit;		
+		stream.init(document.getElementById("webcam"), document.getElementById("canvas2"));		
+		stream.start();
 	</script>
 </body>
 </html>

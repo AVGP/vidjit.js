@@ -1,4 +1,5 @@
-var Vidjit = (function() {
+var Vidjit = (function(sock) {
+	var instance = {};
 	//Just a reminder: "In" means: (local) video data coming IN to BE STREAMED, "Out" means received data to be OUTPUT to something.
 	
     var threshold = 0.5;
@@ -40,14 +41,14 @@ var Vidjit = (function() {
 				var segmentImgData = canvasInContext.getImageData(x, y, segmentWidth, segmentHeight).data;
 				var avg = calcPartialAvg(segmentImgData,0, segmentWidth * segmentHeight * 4);
 				if(Math.abs(avg - lastFrameAvgs[currentSegmentIndex]) > threshold) {
-					sendSegmentCallback(x,y, segmentImgData);
+					instance.sendSegmentCallback(x,y, compressImgDataPartial(segmentImgData, segmentWidth, segmentHeight));
 				}
 				lastFrameAvgs[currentSegmentIndex] = avg;
 				currentSegmentIndex++;
 			}
 		}
 		
-		setTimeout(videoCallback, 50);
+		setTimeout(videoCallback, 10);
 	};
 	
 	var renderCompressedSegment = function(data, x, y) {
@@ -67,10 +68,10 @@ var Vidjit = (function() {
 			
 // Exported functions
 
-	var init = function(videoInput, canvasOutput, socket, sendCallback, receiveCallback) {
+	instance.init = function(videoInput, canvasOutput, sendCallback) {
 		inputElem = videoInput;
 		outputElem = canvasOutput;
-		socketInstance = socket;
+		socketInstance = sock.connect();
 		width = videoInput.width;
 		height = videoInput.height;
         for(var i=0; i < nSegments; i++) lastFrameAvgs[i] = 0;
@@ -84,50 +85,41 @@ var Vidjit = (function() {
         canvasInContext = canvas.getContext("2d");
         canvasOutContext = canvasOutput.getContext("2d");	
         
-        if(sendCallback !== undefined) sendSegmentCallback = sendCallback;
-        if(receiveCallback !== undefined) receiveSegmentCallback = receiveCallback;
+        if(sendCallback !== undefined) instance.sendSegmentCallback = sendCallback;
 	};
 	
-	var start = function() {
+	instance.start = function() {
 		//TODO: Make sure this works in all browsers!
     	window.navigator.webkitGetUserMedia({audio: true, video: true}, function(stream) {
         	inputElem.src = window.webkitURL.createObjectURL(stream);
             videoCallback();
         });
         
-        receiveSegment();  
+        instance.receiveSegment();  
 	};
 	
-    var sendSegmentCallback = function(x,y, segmentImgData) {
+    instance.sendSegmentCallback = function(x,y, compressedSegmentImgData) {
 		socketInstance.emit("imgData", {
 			"x": x, 
 			"y": y, 
-			img: compressImgDataPartial(segmentImgData, segmentWidth, segmentHeight)
+			img: compressedSegmentImgData
 		});    
     };
-    var receiveSegmentSource = undefined;
     
-	var receiveSegment = function() {
-		if(receiveSegmentSource === undefined) {
+	instance.receiveSegment = function(x, y, buffer) {
+		if(x === undefined) {
 			socketInstance.on('imgData', function (data) {
 				renderCompressedSegment(data.img, data.x, data.y);
 			});
 		} else {
-			data = sourceFunction();
-			renderCompressedSegment(data.buffer, data.x, data.y);			
+			renderCompressedSegment(buffer, x, y);			
 		}
 	};    
 	
 	
 // Thank's for reading the source code. Have some fun!	
-	return {
-		"init": init, 
-		"start": start, 
-		"sendSegmentCallback": sendSegmentCallback, 
-		"receiveSegmentFunc": receiveSegmentSource,
-		"receiveSegmentTrigger": receiveSegment
-	};
-}());
+	return instance;
+}(io));
 
 Vidjit.LZW = {
     compress: function (uncompressed) {
