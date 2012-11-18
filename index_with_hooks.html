@@ -1,0 +1,27 @@
+<html>
+<head>
+    <script src="/socket.io/socket.io.js"></script>
+	<script src="/vidjit.js"></script>
+	<!-- script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script -->
+</head>
+<body>
+	<canvas id="canvas2" width="500" height="500" style="border:#f00 solid 1px"></canvas>
+	<video id="webcam" style="display:block;" width="400" height="300" autoplay></video>
+	<script>
+		var streaming = Vidjit;
+		var sock_trick = io;
+		io = null;
+		var sock = sock_trick.connect();
+		
+		streaming.init(document.getElementById("webcam"), document.getElementById("canvas2"), function(x, y, data) {
+			console.log("Data emitted");
+			sock.emit("imgData", {img: data, "x": x, "y": y});
+		});
+		
+		sock.on("imgData", function(data) {
+			streaming.receiveSegment(data.x, data.y, data.img);
+		});
+		streaming.start();
+	</script>
+</body>
+</html>
