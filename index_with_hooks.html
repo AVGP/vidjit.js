@@ -8,20 +8,24 @@
 	<canvas id="canvas2" width="500" height="500" style="border:#f00 solid 1px"></canvas>
 	<video id="webcam" style="display:block;" width="400" height="300" autoplay></video>
 	<script>
-		var streaming = Vidjit;
-		var sock_trick = io;
+		//A little, cheap trick to simulate the absence of socket.io by removing the default module name of it:
+		var cheapTrick = io;
 		io = null;
-		var sock = sock_trick.connect();
+		//And here is our wonderful socket:
+		var sock = cheapTrick.connect();
 		
-		streaming.init(document.getElementById("webcam"), document.getElementById("canvas2"), function(x, y, data) {
+		//The hooked-up stream:
+		
+		var stream = Vidjit;
+		stream.init(document.getElementById("webcam"), document.getElementById("canvas2"), function(x, y, data) {
 			console.log("Data emitted");
 			sock.emit("imgData", {img: data, "x": x, "y": y});
 		});
 		
 		sock.on("imgData", function(data) {
-			streaming.receiveSegment(data.x, data.y, data.img);
+			stream.receiveSegment(data.x, data.y, data.img);
 		});
-		streaming.start();
+		stream.start();
 	</script>
 </body>
 </html>
