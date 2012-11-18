@@ -2,6 +2,16 @@
 ## Version 0.1.1
 **This is an experiment and needs a lot of work!**
 
+## Getting started
+Just run
+```
+$ node server.js
+```
+
+and point your browser to http://localhost:8080 in two different windows.
+The easy way of doing this is shown index.html, the harder stuff with hooking around 
+socket.io can be found in index\_with\_hooks.html
+
 ## Why would you want that?
 
 Video streaming has been a domain for plugins (Flash, Silverlight and even worse stuff) but the UserMedia- and WebRTC APIs and Javascript give us enough power to
