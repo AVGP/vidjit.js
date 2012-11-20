@@ -1,0 +1,256 @@
+{
+    "project": {},
+    "files": {
+        "vidjit.js": {
+            "name": "vidjit.js",
+            "modules": {},
+            "classes": {
+                "Vidjit": 1,
+                "LZW": 1
+            },
+            "fors": {},
+            "namespaces": {}
+        }
+    },
+    "modules": {},
+    "classes": {
+        "Vidjit": {
+            "name": "Vidjit",
+            "shortname": "Vidjit",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "file": "vidjit.js",
+            "line": 1,
+            "description": "Main class for Vidjit.js"
+        },
+        "LZW": {
+            "name": "LZW",
+            "shortname": "LZW",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "file": "vidjit.js",
+            "line": 193,
+            "description": "This class provides an LZW implementation. \nThis is used by Vidjit to compress and decompress the image data that goes over the wire."
+        }
+    },
+    "classitems": [
+        {
+            "file": "vidjit.js",
+            "line": 19,
+            "description": "Calculates the color-by-color average of a (linear) subset of an array.",
+            "itemtype": "method",
+            "name": "calcPartialAvg",
+            "access": "private",
+            "tagname": "",
+            "params": [
+                {
+                    "name": "buffer",
+                    "description": "The buffer with the pixel data (format RGBARGBA....)",
+                    "type": "Array"
+                },
+                {
+                    "name": "first",
+                    "description": "The index (first pixel is 0) to start calculating the average for",
+                    "type": "Integer"
+                },
+                {
+                    "name": "last",
+                    "description": "The index where calculation ends at",
+                    "type": "Integer"
+                }
+            ],
+            "return": {
+                "description": "the average value of all pixels (color by color)",
+                "type": "Integer"
+            },
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 36,
+            "description": "Compresses a segment of the pixel data by stripping the alpha value and converting it into a string\nThe string is then passed to Vidjit.LZW.compress to compress it.",
+            "itemtype": "method",
+            "name": "compressImgDataPartial",
+            "access": "private",
+            "tagname": "",
+            "params": [
+                {
+                    "name": "buffer",
+                    "description": "The buffer with the pixel data (format RGBARGBA....)",
+                    "type": "Array"
+                },
+                {
+                    "name": "w",
+                    "description": "Width (in pixels) of the pixel data rect",
+                    "type": "Integer"
+                },
+                {
+                    "name": "h",
+                    "description": "Height (in pixels) of the pixel data rect",
+                    "type": "Integer"
+                }
+            ],
+            "return": {
+                "description": "The LZW compressed string of RGB values (as chars)",
+                "type": "String"
+            },
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 79,
+            "description": "Renders a compressed image segment to the output canvas",
+            "itemtype": "method",
+            "name": "renderCompressedSegment",
+            "access": "private",
+            "tagname": "",
+            "params": [
+                {
+                    "name": "data",
+                    "description": "The string with the compressed image information",
+                    "type": "String"
+                },
+                {
+                    "name": "x",
+                    "description": "The x offset to draw the image segment to",
+                    "type": "Integer"
+                },
+                {
+                    "name": "y",
+                    "description": "The y offset to draw the image segment to",
+                    "type": "Integer"
+                }
+            ],
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 105,
+            "description": "Initializing Vidjit.js for streaming",
+            "itemtype": "method",
+            "name": "init",
+            "params": [
+                {
+                    "name": "videoInput",
+                    "description": "The video element that is used as the image data source",
+                    "type": "Video"
+                },
+                {
+                    "name": "canvasOutput",
+                    "description": "The canvas element that is used as output destination for displaying the received data",
+                    "type": "Canvas"
+                },
+                {
+                    "name": "sendCallback",
+                    "description": "A function that takes (x,y,compressedImgData) as parameters and sends them to the server.\n\t\t\t\t\t\tIf left out, default socket.io implementation is used.",
+                    "type": "Function",
+                    "optional": true
+                }
+            ],
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 134,
+            "description": "Starts the streaming",
+            "itemtype": "method",
+            "name": "start",
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 152,
+            "description": "Callback for sending a compressed segment to the server\nThe default implementation uses socket.io for doing so.",
+            "itemtype": "method",
+            "name": "sendSegmentCallback",
+            "params": [
+                {
+                    "name": "x",
+                    "description": "The x offset of the segment in the whole image data",
+                    "type": "Integer"
+                },
+                {
+                    "name": "y",
+                    "description": "The y offset of the segment in the whole image data",
+                    "type": "Integer"
+                },
+                {
+                    "name": "compressedSegmentImgData",
+                    "description": "The compressed image data for the segment, generated internally.",
+                    "type": "String"
+                }
+            ],
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 169,
+            "description": "This callback by default receives (using socket.io) a segment and renders it, when no parameters are passed\nIf you pass parameters to it, always pass all three of them. In this case the method will render the data you passed in.",
+            "itemtype": "method",
+            "name": "receiveSegment",
+            "params": [
+                {
+                    "name": "x",
+                    "description": "The x offset to render the segment to",
+                    "type": "Integer"
+                },
+                {
+                    "name": "y",
+                    "description": "The y offset to render the segment to",
+                    "type": "Integer"
+                },
+                {
+                    "name": "buffer",
+                    "description": "String containing the compressed segment data to render",
+                    "type": "String"
+                }
+            ],
+            "class": "Vidjit"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 200,
+            "description": "Compresses a string",
+            "itemtype": "method",
+            "name": "compress",
+            "params": [
+                {
+                    "name": "uncompressed",
+                    "description": "The string that needs to be compressed",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "The compressed data as a ByteArray.",
+                "type": "ByteArray"
+            },
+            "class": "LZW"
+        },
+        {
+            "file": "vidjit.js",
+            "line": 241,
+            "description": "Decompresses a ByteArray to the string that has been compressed using compress() before",
+            "itemtype": "method",
+            "name": "decompress",
+            "params": [
+                {
+                    "name": "compressed",
+                    "description": "The ByteArray with the compressed data",
+                    "type": "ByteArray"
+                }
+            ],
+            "return": {
+                "description": "The uncompressed string.",
+                "type": "String"
+            },
+            "class": "LZW"
+        }
+    ],
+    "warnings": []
+}
